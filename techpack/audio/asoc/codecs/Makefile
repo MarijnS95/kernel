@@ -2,6 +2,10 @@ snd-soc-wcd9xxx-v2-objs := wcd9xxx-common-v2.o wcd9xxx-resmgr-v2.o wcdcal-hwdep.
 snd-soc-wcd-cpe-objs := wcd_cpe_services.o wcd_cpe_core.o
 snd-soc-wsa881x-objs := wsa881x.o wsa881x-tables.o wsa881x-regmap.o wsa881x-temp-sensor.o
 snd-soc-wcd-mbhc-objs := wcd-mbhc-v2.o
+CFLAGS_wcd-mbhc-v2.o := -DDEBUG
+CFLAGS_wcd-mbhc-adc.o := -DDEBUG
+CFLAGS_wcd-mbhc-legacy.o := -DDEBUG
+CFLAGS_msm-analog-cdc.o := -DDEBUG
 ifneq (,$(filter $(CONFIG_SND_SOC_WCD_MBHC_LEGACY),y m))
 	snd-soc-wcd-mbhc-objs += wcd-mbhc-legacy.o
 endif
