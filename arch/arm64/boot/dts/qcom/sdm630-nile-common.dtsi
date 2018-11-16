@@ -76,7 +76,7 @@
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1";
-					fsmgr_flags = "wait,verify,slotselect";
+					fsmgr_flags = "wait,slotselect";
 					status = "ok";
 				};
 
@@ -121,7 +121,7 @@
 		egis,irq-gpio      = <&tlmm 72 0>;
 	};
 
-	fpc1020 {
+	/*fpc1020 {
 		status = "ok";
 		compatible = "fpc,fpc1020";
 		interrupt-parent = <&tlmm>;
@@ -139,7 +139,7 @@
 		pinctrl-0 = <&msm_gpio_20>;
 		pinctrl-1 = <&msm_gpio_20_output_high>;
 		pinctrl-2 = <&msm_gpio_72>;
-	};
+	};*/
 
 	sim_detect {
 		compatible = "sim-detect";
