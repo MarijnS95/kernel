@@ -50,6 +50,7 @@
 #include <linux/pm_wakeup.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/poll.h>
 
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
@@ -134,6 +135,7 @@ static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 	int rc;
 	struct regulator *vreg = fpc1145->vreg[fpc_rail];
 	struct device *dev = fpc1145->dev;
+	dev_info(dev, "%d'ing regulator %s\n", enable, vreg_conf[fpc_rail].name);
 
 	if (!vreg)
 		return -EINVAL;
@@ -148,10 +150,13 @@ static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 					"Unable to set voltage on %s, %d\n",
 					vreg_conf[fpc_rail].name, rc);
 		}
-		rc = regulator_set_load(vreg, vreg_conf[fpc_rail].ua_load);
-		if (rc < 0)
-			dev_err(dev, "Unable to set current on %s, %d\n",
-					vreg_conf[fpc_rail].name, rc);
+		if (vreg_conf[fpc_rail].ua_load)
+		{
+			rc = regulator_set_load(vreg, vreg_conf[fpc_rail].ua_load);
+			if (rc < 0)
+				dev_err(dev, "Unable to set current on %s, %d\n",
+						vreg_conf[fpc_rail].name, rc);
+		}
 		rc = regulator_enable(vreg);
 		if (rc) {
 			dev_err(dev, "error enabling %s: %d\n",
@@ -218,12 +223,14 @@ static int hw_reset(struct fpc1145_data *fpc1145)
 	rc = select_pin_ctl(fpc1145, "fpc1145_reset_reset");
 	if (rc)
 		goto exit;
-	usleep_range(FPC1145_RESET_LOW_US, FPC1145_RESET_LOW_US + 100);
+	// usleep_range(FPC1145_RESET_LOW_US, FPC1145_RESET_LOW_US + 100);
+	msleep(30);
 
 	rc = select_pin_ctl(fpc1145, "fpc1145_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(FPC1145_RESET_HIGH1_US, FPC1145_RESET_HIGH1_US + 100);
+	// usleep_range(FPC1145_RESET_HIGH1_US, FPC1145_RESET_HIGH1_US + 100);
+	msleep(20);
 
 	irq_gpio = gpio_get_value(fpc1145->irq_gpio);
 	dev_info(dev, "IRQ after reset %d\n", irq_gpio);
@@ -253,16 +260,16 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 		fpc1145->prepared = true;
 		select_pin_ctl(fpc1145, "fpc1145_reset_reset");
 
-		rc = vreg_setup(fpc1145, VCC_SPI, true);
-		if (rc)
-			goto exit;
+		// rc = vreg_setup(fpc1145, VCC_SPI, true);
+		// if (rc)
+		// 	goto exit;
 
 #ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_enable");
 #else
-		rc = vreg_setup(fpc1145, VDD_IO, true);
-		if (rc)
-			goto exit_1;
+		// rc = vreg_setup(fpc1145, VDD_IO, true);
+		// if (rc)
+		// 	goto exit_1;
 
 		rc = vreg_setup(fpc1145, VDD_ANA, true);
 		if (rc)
@@ -288,10 +295,10 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 #else
 		(void)vreg_setup(fpc1145, VDD_ANA, false);
 exit_2:
-		(void)vreg_setup(fpc1145, VDD_IO, false);
+	//	(void)vreg_setup(fpc1145, VDD_IO, false);
 exit_1:
 #endif
-		(void)vreg_setup(fpc1145, VCC_SPI, false);
+	//	(void)vreg_setup(fpc1145, VCC_SPI, false);
 exit:
 		fpc1145->prepared = false;
 	} else {
@@ -323,6 +330,9 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 	switch (cmd) {
 	case FPC_IOCWPREPARE:
+	case 0xa4:
+	case 0xa5:
+		arg = cmd == 0xa4;
 		dev_dbg(fpc1145_drvdata->dev, "%s device\n",
 			(arg == 0 ? "Unpreparing" : "Preparing"));
 		rc = device_prepare(fpc1145_drvdata, !!arg);
@@ -332,6 +342,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 		dev_dbg(fpc1145_drvdata->dev, "WDEVWAKE Not implemented.\n");
 		break;
 	case FPC_IOCWRESET:
+	case 4:
 		dev_dbg(fpc1145_drvdata->dev, "Resetting device\n");
 		rc = hw_reset(fpc1145_drvdata);
 		break;
@@ -380,6 +391,35 @@ static long fpc1145_device_ioctl(struct file *fp,
 	return rc;
 }
 
+static unsigned int fpc1145_poll_interrupt(struct file *file,
+		struct poll_table_struct *wait) {
+	int mask = 0;
+	int val = 0;
+	struct device *dev = fpc1145_drvdata->dev;
+	val = !gpio_get_value(fpc1145_drvdata->irq_gpio);
+	if (val)
+	{
+		dev_info(dev, "gpio already triggered\n");
+		return POLLIN | POLLRDNORM;
+	}
+
+	if (fpc1145_drvdata->irq_fired) {
+		fpc1145_drvdata->irq_fired = false;
+		enable_irq(fpc1145_drvdata->irq);
+	}
+
+	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
+	val = !gpio_get_value(fpc1145_drvdata->irq_gpio);
+	dev_info(dev, "gpio after irq: %d\n", val);
+	if (val)
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
+
+	dev_info(dev, "gpio val %d, irq fired: %d\n", val, fpc1145_drvdata->irq_fired);
+	if (val)
+		mask |= POLLIN | POLLRDNORM;
+	return mask;
+}
+
 static int fpc1145_device_suspend(struct device *dev)
 {
 	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
@@ -414,11 +454,12 @@ static const struct file_operations fpc1145_device_fops = {
 	.release = fpc1145_device_release,
 	.unlocked_ioctl = fpc1145_device_ioctl,
 	.compat_ioctl = fpc1145_device_ioctl,
+	.poll = fpc1145_poll_interrupt,
 };
 
 static struct miscdevice fpc1145_misc = {
 	.minor = MISC_DYNAMIC_MINOR,
-	.name = "fingerprint",
+	.name = "esfp0",
 	.fops = &fpc1145_device_fops,
 };
 
@@ -464,6 +505,7 @@ static int fpc1145_get_regulators(struct fpc1145_data *fpc1145)
 	unsigned short i = 0;
 
 	for (i = 0; i < FPC_VREG_MAX; i++) {
+		dev_info(dev, "Looking for regulator %s\n", vreg_conf[i].name);
 		if (!vreg_conf[i].is_optional)
 			fpc1145->vreg[i] = devm_regulator_get_optional(
 						dev, vreg_conf[i].name);
@@ -560,7 +602,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 	if (rc)
 		goto exit;
 
-	irqf = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
+	irqf = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
 
 	wakeup_source_init(&fpc1145->wakelock, "fpc_wake");
