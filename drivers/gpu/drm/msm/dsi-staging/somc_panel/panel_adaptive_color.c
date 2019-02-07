@@ -31,6 +31,8 @@
 #include "../sde/sde_crtc.h"
 #include "../sde/sde_plane.h"
 
+#undef pr_fmt
+#define pr_fmt(fmt) "somc_panel_adaptive_color: " fmt
 
 int somc_panel_parse_dt_adaptivecolor_config(struct dsi_panel *panel,
 			struct device_node *np)
@@ -145,6 +147,9 @@ static void somc_panel_colormgr_adj_pa(struct dsi_panel *panel,
 	}
 
 	bl_percent = (bl_lvl * 100) / ad_col->picadj_br_max;
+	// bl_percent = (u8)(fsqrt((float)bl_lvl / ad_col->picadj_br_max) * 100.f);
+	// bl_percent = (u8)int_sqrt(bl_lvl * 10000 / ad_col->picadj_br_max);
+	// pr_err("Backlight of %d%% results in %d%% scaling\n", (bl_lvl * 100) / ad_col->picadj_br_max, bl_percent);
 
 	if (invert)
 		pa_percent -= bl_percent;
@@ -159,6 +164,11 @@ static void somc_panel_colormgr_adj_pa(struct dsi_panel *panel,
 		(ad_col->picadj_data_br_max.contrast * pa_percent) / 100;
 	color_mgr->picadj_data.value = (u32)
 		(ad_col->picadj_data_br_max.value * pa_percent) / 100;
+
+	pr_info("Hue: %d%%\n",        color_mgr->picadj_data.hue);
+	pr_info("Saturation: %d%%\n", color_mgr->picadj_data.saturation);
+	pr_info("Contrast: %d%%\n",   color_mgr->picadj_data.contrast);
+	pr_info("Value: %d%%\n",      color_mgr->picadj_data.value);
 
 	return;
 }
