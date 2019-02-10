@@ -1112,6 +1112,138 @@ static ssize_t somc_panel_colormgr_pcc_profile_avail_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
 }
 
+static ssize_t somc_panel_colormgr_picadj_hue_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", color_mgr->picadj_data.hue);
+}
+
+static ssize_t somc_panel_colormgr_picadj_hue_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int ret = count;
+	u32 hue;
+
+	ret = kstrtouint(buf, 5, &hue);
+	if (ret < 0) {
+		pr_err("%s: Error: buf = %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	color_mgr->picadj_data.hue = hue;
+
+	ret = somc_panel_send_pa(display);
+	if (ret < 0)
+		return -EINVAL;
+
+	return count;
+}
+
+static ssize_t somc_panel_colormgr_picadj_saturation_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", color_mgr->picadj_data.saturation);
+}
+
+static ssize_t somc_panel_colormgr_picadj_saturation_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int ret = count;
+	u32 saturation;
+
+	ret = kstrtouint(buf, 5, &saturation);
+	if (ret < 0) {
+		pr_err("%s: Error: buf = %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	color_mgr->picadj_data.saturation = saturation;
+
+	ret = somc_panel_send_pa(display);
+	if (ret < 0)
+		return -EINVAL;
+
+	return count;
+}
+
+static ssize_t somc_panel_colormgr_picadj_contrast_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", color_mgr->picadj_data.contrast);
+}
+
+static ssize_t somc_panel_colormgr_picadj_contrast_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int ret = count;
+	u32 contrast;
+
+	ret = kstrtouint(buf, 5, &contrast);
+	if (ret < 0) {
+		pr_err("%s: Error: buf = %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	color_mgr->picadj_data.contrast = contrast;
+
+	ret = somc_panel_send_pa(display);
+	if (ret < 0)
+		return -EINVAL;
+
+	return count;
+}
+
+static ssize_t somc_panel_colormgr_picadj_value_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", color_mgr->picadj_data.value);
+}
+
+static ssize_t somc_panel_colormgr_picadj_value_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int ret = count;
+	u32 value;
+
+	ret = kstrtouint(buf, 5, &value);
+	if (ret < 0) {
+		pr_err("%s: Error: buf = %s\n", __func__, buf);
+		return -EINVAL;
+	}
+	color_mgr->picadj_data.value = value;
+
+	ret = somc_panel_send_pa(display);
+	if (ret < 0)
+		return -EINVAL;
+
+	return count;
+}
+
 static struct device_attribute colormgr_attributes[] = {
 	__ATTR(cc, S_IRUGO, somc_panel_std_pcc_show, NULL),
 	__ATTR(srgb_cc, S_IRUGO, somc_panel_srgb_pcc_show, NULL),
@@ -1126,6 +1258,18 @@ static struct device_attribute colormgr_attributes[] = {
 	__ATTR(pcc_profile_avail, S_IRUGO,
 				somc_panel_colormgr_pcc_profile_avail_show,
 				NULL),
+	__ATTR(picadj_hue, S_IRUGO|S_IWUSR|S_IWGRP,
+				somc_panel_colormgr_picadj_hue_show,
+				somc_panel_colormgr_picadj_hue_store),
+	__ATTR(picadj_saturation, S_IRUGO|S_IWUSR|S_IWGRP,
+				somc_panel_colormgr_picadj_saturation_show,
+				somc_panel_colormgr_picadj_saturation_store),
+	__ATTR(picadj_contrast, S_IRUGO|S_IWUSR|S_IWGRP,
+				somc_panel_colormgr_picadj_contrast_show,
+				somc_panel_colormgr_picadj_contrast_store),
+	__ATTR(picadj_value, S_IRUGO|S_IWUSR|S_IWGRP,
+				somc_panel_colormgr_picadj_value_show,
+				somc_panel_colormgr_picadj_value_store),
 };
 
 int somc_panel_colormgr_register_attr(struct device *dev)
