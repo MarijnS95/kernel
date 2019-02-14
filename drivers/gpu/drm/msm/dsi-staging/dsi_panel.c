@@ -621,6 +621,23 @@ static int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 
 	mode = panel->cur_mode;
 
+	switch (type) {
+		case DSI_CMD_SET_AOD_LOW:
+			pr_info("%s: AOD_LOW\n", __func__);
+			break;
+		case DSI_CMD_SET_AOD_ON:
+			pr_info("%s: AOD_ON\n", __func__);
+			break;
+		case DSI_CMD_SET_AOD_OFF:
+			pr_info("%s: AOD_OFF\n", __func__);
+			break;
+		case DSI_CMD_SET_AOD_HIGH:
+			pr_info("%s: AOD_HIGH\n", __func__);
+			break;
+		default:
+			break;
+	}
+
 	cmds = mode->priv_info->cmd_sets[type].cmds;
 	count = mode->priv_info->cmd_sets[type].count;
 	state = mode->priv_info->cmd_sets[type].state;
@@ -752,6 +769,8 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 	dsi = &panel->mipi_device;
 
+	pr_info("%s, %u\n", __func__, bl_lvl);
+
 	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 	if (rc < 0)
 		pr_err("failed to update dcs backlight:%d\n", bl_lvl);
@@ -768,6 +787,8 @@ static int dsi_panel_set_aod_change(struct dsi_panel *panel, u32 bl_lvl)
 		pr_err("invalid params\n");
 		return -EINVAL;
 	}
+
+	pr_info("%s: Setting aod bl to %u\n", __func__, bl_lvl);
 
 	if (bl_lvl < AOD_MODE_THRESHOLD)
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_LOW);
@@ -789,7 +810,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	if (panel->type == EXT_BRIDGE)
 		return 0;
 
-	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
+	pr_info("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	if (panel->spec_pdata->aod_mode)
 		return dsi_panel_set_aod_change(panel, bl_lvl);

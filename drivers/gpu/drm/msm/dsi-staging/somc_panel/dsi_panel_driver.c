@@ -886,7 +886,6 @@ error:
 	return rc;
 }
 
-
 void dsi_panel_driver_parse_dt_mplus(struct dsi_panel *panel,
 				  struct device_node *np)
 {
@@ -1377,7 +1376,7 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 
 	switch (power_mode) {
 		case SDE_MODE_DPMS_ON:
-			pr_debug("Requested DPMS ON state.\n");
+			pr_info("Requested DPMS ON state.\n");
 			rc = dsi_panel_set_aod_off(panel);
 			spec_pdata->aod_mode = power_mode;
 			display_aod_mode = 0;
@@ -1421,6 +1420,7 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 
 			spec_pdata->aod_mode = power_mode;
 			display_aod_mode = power_mode;
+			pr_warn("LP2: Omitting aod_on call!\n");
 			dsi_panel_driver_notify_suspend(panel);
 			break;
 		case SDE_MODE_DPMS_OFF:
@@ -1473,6 +1473,8 @@ static ssize_t dsi_panel_aod_mode_store(struct device *dev,
 	}
 	if (spec_pdata->aod_mode != mode)
 		spec_pdata->aod_mode = mode;
+
+	pr_info("Storing aod_mode %d\n", mode);
 
 	if (mode)
 		dsi_panel_set_aod_on(panel);
@@ -1545,6 +1547,8 @@ static ssize_t dsi_panel_sod_mode_store(struct device *dev,
 	}
 	mutex_lock(&display->display_lock);
 
+	pr_info("Storing sod_mode %d\n", mode);
+
 	if (spec_pdata->sod_mode != mode) {
 		pr_info("%s: current %d request %d\n", __func__,
 			spec_pdata->sod_mode, mode);
@@ -1599,7 +1603,7 @@ int get_display_sod_mode(void)
 
 int somc_panel_get_display_aod_mode(void)
 {
-	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
+	pr_debug("%s: aod mode setting %d\n", __func__, display_aod_mode);
 	return display_aod_mode;
 }
 
