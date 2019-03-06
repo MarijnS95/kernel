@@ -19,6 +19,8 @@
  * GNU General Public License for more details.
  */
 
+#define pr_fmt(fmt)	"msm-dsi-panel-driver:[%s:%d] " fmt, __func__, __LINE__
+
 #include <linux/module.h>
 
 #include <linux/sysfs.h>
@@ -1398,6 +1400,8 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 			display_aod_mode = power_mode;
 
 			rc = dsi_panel_set_aod_on(panel);
+			if (!rc)
+				rc = dsi_panel_set_backlight(panel, 4);
 			dsi_panel_driver_notify_suspend(panel);
 			break;
 		case SDE_MODE_DPMS_LP2:
@@ -1420,7 +1424,6 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 
 			spec_pdata->aod_mode = power_mode;
 			display_aod_mode = power_mode;
-			pr_warn("LP2: Omitting aod_on call!\n");
 			dsi_panel_driver_notify_suspend(panel);
 			break;
 		case SDE_MODE_DPMS_OFF:
