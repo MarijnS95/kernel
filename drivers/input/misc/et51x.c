@@ -82,6 +82,7 @@ static const char *const pctl_names[] = {
 
 struct et51x_data {
 	struct miscdevice misc;
+	struct miscdevice fallback_misc;
 	struct device *dev;
 	struct pinctrl *fingerprint_pinctrl;
 	struct pinctrl_state *pinctrl_state[ARRAY_SIZE(pctl_names)];
@@ -284,6 +285,104 @@ static inline void et51x_enable_irq_if_disabled(struct et51x_data *et51x)
 	mutex_unlock(&et51x->intrpoll_lock);
 }
 
+static struct et51x_data *fallback_to_et51x_data(struct file *fp)
+{
+	struct miscdevice *md = (struct miscdevice *)fp->private_data;
+	return container_of(md, struct et51x_data, fallback_misc);
+}
+
+static int et51x_device_fallback_open(struct inode *inode, struct file *fp)
+{
+	struct et51x_data *et51x = fallback_to_et51x_data(fp);
+	pm_wakeup_event(et51x->dev, 1);
+	return 0;
+}
+
+static int et51x_device_fallback_release(struct inode *inode, struct file *fp)
+{
+	struct et51x_data *et51x = fallback_to_et51x_data(fp);
+	pm_relax(et51x->dev);
+	return 0;
+}
+
+struct ioctl_cmd {
+	int int_mode;
+	int detect_period;
+	int detect_threshold;
+};
+
+static long et51x_device_fallback_ioctl(struct file *fp, unsigned int cmd,
+			       unsigned long arg)
+{
+	int rc = 0;
+	struct et51x_data *et51x = fallback_to_et51x_data(fp);
+	struct ioctl_cmd data;
+
+	switch (cmd) {
+		case 0xa4: // int trigger init
+			pr_info("%s: Skipping superfluous interrupt trigger init\n", __func__);
+			if (copy_from_user(&data, (struct ioctl_cmd __user *)arg, sizeof(data)))
+				rc = -EFAULT;
+			pr_info("fp_ioctl int_mode %u, detect_period %u, detect_period %u (%s)\n",
+				data.int_mode,
+				data.detect_period,
+				data.detect_threshold,
+				__func__);
+			break;
+		case 0xa5: // int trigger close
+			pr_info("%s: Skipping superfluous interrupt trigger close\n", __func__);
+			break;
+		case 0xa8: // abort
+			pr_info("%s: Skipping superfluous interrupt trigger abort\n", __func__);
+			break;
+		case 4: // fp_sensor_reset
+			pr_info("%s: Resetting device\n", __func__);
+			rc = hw_reset(et51x);
+			break;
+		case 5:
+			if (copy_from_user(&data, (struct ioctl_cmd __user *)arg, sizeof(data)))
+				rc = -EFAULT;
+			else {
+				pr_info("%s: Powering %d\n", __func__, data.int_mode);
+				rc = device_prepare(et51x, data.int_mode);
+			}
+			break;
+		default:
+			rc = -ENOIOCTLCMD;
+			break;
+	}
+
+	return rc;
+}
+
+static unsigned int et51x_fallback_poll_interrupt(struct file *fp,
+					 struct poll_table_struct *wait)
+{
+	int val = 0;
+	struct et51x_data *et51x = fallback_to_et51x_data(fp);
+	struct device *dev = et51x->dev;
+
+	/* Add current file to the waiting list */
+	poll_wait(fp, &et51x->irq_evt, wait);
+
+	val = et51x_get_gpio_triggered(et51x);
+	if (val) {
+		dev_dbg(dev, "gpio triggered\n");
+		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
+		return POLLIN | POLLRDNORM;
+	}
+
+	/*
+	 * Nothing happened yet; make the poll wait for irq_evt.
+	 * The wakelock can be relaxed preemptively, as no processing has to
+	 * be done until the next wake-enabled IRQ fires.
+	 */
+	et51x_enable_irq_if_disabled(et51x);
+	pm_relax(dev);
+
+	return 0;
+}
+
 static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 			       unsigned long arg)
 {
@@ -433,6 +532,16 @@ static const struct file_operations et51x_device_fops = {
 	.poll = et51x_poll_interrupt,
 };
 
+static const struct file_operations et51x_fallback_device_fops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.open = et51x_device_fallback_open,
+	.release = et51x_device_fallback_release,
+	.unlocked_ioctl = et51x_device_fallback_ioctl,
+	.compat_ioctl = et51x_device_fallback_ioctl,
+	.poll = et51x_fallback_poll_interrupt,
+};
+
 static irqreturn_t et51x_irq_handler(int irq, void *handle)
 {
 	struct et51x_data *et51x = handle;
@@ -494,6 +603,12 @@ static int et51x_probe(struct platform_device *pdev)
 		.minor = MISC_DYNAMIC_MINOR,
 		.name = "fingerprint",
 		.fops = &et51x_device_fops,
+	};
+
+	et51x->fallback_misc = (struct miscdevice){
+		.minor = MISC_DYNAMIC_MINOR,
+		.name = "esfp0",
+		.fops = &et51x_fallback_device_fops,
 	};
 
 	et51x->dev = dev;
@@ -619,6 +734,11 @@ static int et51x_probe(struct platform_device *pdev)
 	rc = misc_register(&et51x->misc);
 	if (rc)
 		goto exit_powerdown;
+	rc = misc_register(&et51x->fallback_misc);
+	if (rc) {
+		pr_err("%s: Failed to register fallback miscdev: %d\n", __func__, rc);
+		goto exit_powerdown;
+	}
 
 	dev_info(dev, "%s: ok\n", __func__);
 
