@@ -71,6 +71,7 @@ else
 endif
 
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/$(TARGET_PREBUILT_INT_KERNEL_TYPE)
+TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/$(TARGET_PREBUILT_INT_KERNEL_TYPE)
 
 KERNEL_DTB := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/qcom
 KERNEL_DTB_OUT := $(PRODUCT_OUT)/dtbs
@@ -128,14 +129,22 @@ KERNEL_CROSS_COMPILE := CROSS_COMPILE="$(ccache) $(KERNEL_TOOLCHAIN_PATH)"
 ccache =
 
 define mv-modules
-    mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.order`;\
-    if [ "$$mdpath" != "" ];then\
-        mpath=`dirname $$mdpath`;\
-        ko=`find $$mpath/kernel -type f -name *.ko`;\
-        for i in $$ko; do $(KERNEL_TOOLCHAIN_PATH)strip --strip-unneeded $$i;\
-        mv $$i $(KERNEL_MODULES_OUT)/; done;\
-    fi
+mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.dep`;\
+if [ "$$mdpath" != "" ];then\
+mpath=`dirname $$mdpath`;\
+ko=`find $$mpath/kernel -type f -name *.ko`;\
+for i in $$ko; do mv $$i $(KERNEL_MODULES_OUT)/; done;\
+fi
 endef
+#define mv-modules
+#    mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.order`;\
+#    if [ "$$mdpath" != "" ];then\
+#        mpath=`dirname $$mdpath`;\
+#        ko=`find $$mpath/kernel -type f -name *.ko`;\
+#        for i in $$ko; do $(KERNEL_TOOLCHAIN_PATH)strip --strip-unneeded $$i;\
+#        mv $$i $(KERNEL_MODULES_OUT)/; done;\
+#    fi
+#endef
 
 define clean-module-folder
     mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.order`;\
@@ -189,7 +198,6 @@ TARGET_KERNEL_BINARIES: $(KERNEL_OUT_STAMP) $(KERNEL_CONFIG) $(KERNEL_HEADERS_IN
 				echo "Building Kernel Modules" ; \
 				$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC) O=$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) modules && \
 				$(MAKE) $(MAKE_FLAGS) -C $(KERNEL_SRC) O=$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) modules_install && \
-				$(mv-modules) && \
 				$(clean-module-folder) ; \
 			else \
 				echo "Kernel Modules not enabled" ; \
@@ -198,7 +206,7 @@ TARGET_KERNEL_BINARIES: $(KERNEL_OUT_STAMP) $(KERNEL_CONFIG) $(KERNEL_HEADERS_IN
 $(TARGET_KERNEL_MODULES): TARGET_KERNEL_BINARIES
 
 $(TARGET_PREBUILT_INT_KERNEL): $(TARGET_KERNEL_MODULES)
-	$(mv-modules)
+	# $(mv-modules)
 	$(clean-module-folder)
 
 $(KERNEL_HEADERS_INSTALL_STAMP): $(KERNEL_OUT_STAMP) $(KERNEL_CONFIG)
@@ -243,12 +251,10 @@ $(TARGET_PREBUILT_DTBO): TARGET_KERNEL_BINARIES $(AVBTOOL)
 endif # TARGET_NEEDS_DTBOIMAGE
 
 ## Install it
-.PHONY: $(PRODUCT_OUT)/kernel
 $(PRODUCT_OUT)/kernel: $(KERNEL_BIN)
 	cp $(KERNEL_BIN) $(PRODUCT_OUT)/kernel
 
 ifeq ($(TARGET_NEEDS_DTBOIMAGE),true)
-.PHONY: $(PRODUCT_OUT)/dtbo.img
 $(PRODUCT_OUT)/dtbo.img: $(KERNEL_DTBO_OUT)
 	cp $(KERNEL_DTBO_OUT) $(PRODUCT_OUT)/dtbo.img
 endif # TARGET_NEEDS_DTBOIMAGE
