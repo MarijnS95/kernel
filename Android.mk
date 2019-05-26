@@ -27,7 +27,6 @@ KERNEL_DEFCONFIG_SRC := $(wildcard $(LOCAL_PATH)/arch/$(TARGET_KERNEL_ARCH)/conf
 KERNEL_DEFCONFIG := $(notdir $(KERNEL_DEFCONFIG_SRC))
 $(info "Using $(KERNEL_DEFCONFIG) from $(KERNEL_DEFCONFIG_SRC)")
 
-
 include $(LOCAL_PATH)/AndroidKernel.mk
 
 # ifeq ($(TARGET_NEEDS_DTBOIMAGE),true)

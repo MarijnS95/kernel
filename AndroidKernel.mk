@@ -55,22 +55,29 @@ KERNEL_CFLAGS := KCFLAGS=-mno-android
 endif
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
-current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+# current_dir := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
 TARGET_KERNEL := msm-$(TARGET_KERNEL_VERSION)
-ifeq ($(TARGET_KERNEL),$(current_dir))
-    # New style, kernel/msm-version
-    BUILD_ROOT_LOC := ../../
-    TARGET_KERNEL_SOURCE := kernel/$(TARGET_KERNEL)
+# ifeq ($(TARGET_KERNEL),$(current_dir))
+#     # New style, kernel/msm-version
+#     BUILD_ROOT_LOC := ../../
+#     TARGET_KERNEL_SOURCE := kernel/$(TARGET_KERNEL)
+#     KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/kernel/$(TARGET_KERNEL)
+#     KERNEL_SYMLINK := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+#     KERNEL_USR := $(KERNEL_SYMLINK)/usr
+# else ifeq ($(mkfile_path),"kernel/sony/$(TARGET_KERNEL)/kernel")
+    # Sony style
+    BUILD_ROOT_LOC := ../../../../
+    TARGET_KERNEL_SOURCE := $(dir $(mkfile_path)) #"kernel/sony/$(TARGET_KERNEL)/kernel"
     KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/kernel/$(TARGET_KERNEL)
     KERNEL_SYMLINK := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
     KERNEL_USR := $(KERNEL_SYMLINK)/usr
-else
-    # Legacy style, kernel source directly under kernel
-    KERNEL_LEGACY_DIR := true
-    BUILD_ROOT_LOC := ../
-    TARGET_KERNEL_SOURCE := kernel
-    KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
-endif
+# else
+#     # Legacy style, kernel source directly under kernel
+#     KERNEL_LEGACY_DIR := true
+#     BUILD_ROOT_LOC := ../
+#     TARGET_KERNEL_SOURCE := kernel
+#     KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+# endif
 
 KERNEL_CONFIG := $(KERNEL_OUT)/.config
 
@@ -137,9 +144,9 @@ $(KERNEL_CONFIG): $(KERNEL_OUT) $(KERNEL_DEFCONFIG_SRC)
 $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_HEADERS_INSTALL)
 	$(hide) echo "Building kernel..."
 	$(hide) rm -rf $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts
-	$(MAKE) -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) $(KERNEL_CFLAGS)
-	$(MAKE) -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) $(KERNEL_CFLAGS) modules
-	$(MAKE) -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) INSTALL_MOD_PATH=$(BUILD_ROOT_LOC)../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP=1 $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) modules_install
+	$(MAKE) -j8 -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) $(KERNEL_CFLAGS)
+	$(MAKE) -j8 -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) $(KERNEL_CFLAGS) modules
+	$(MAKE) -j8 -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) INSTALL_MOD_PATH=$(BUILD_ROOT_LOC)../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP=1 $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) modules_install
 	$(mv-modules)
 	$(clean-module-folder)
 
@@ -172,6 +179,9 @@ kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 	env KCONFIG_NOTIMESTAMP=true \
 	     $(MAKE) -C $(TARGET_KERNEL_SOURCE) O=$(BUILD_ROOT_LOC)$(KERNEL_OUT) $(KERNEL_MAKE_ENV) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) savedefconfig
 	cp $(KERNEL_OUT)/defconfig $(TARGET_KERNEL_SOURCE)/arch/$(KERNEL_ARCH)/configs/$(KERNEL_DEFCONFIG)
+
+$(INSTALLED_KERNEL_TARGET): $(TARGET_PREBUILT_INT_KERNEL)
+	cp $< $@
 
 endif
 endif
