@@ -4868,7 +4868,7 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 	}
 
 	cb->next_addr = cb->va_end;
-	ipa_ctx->uc_pdev = dev;
+	// ipa_ctx->uc_pdev = dev;
 
 	IPADBG("UC CB PROBE pdev=%p attached\n", dev);
 	return 0;
