@@ -157,7 +157,10 @@ static int clk_rcg2_set_parent(struct clk_hw *hw, u8 index)
 	if (ret)
 		return ret;
 
-	return update_config(rcg, old_cfg);
+	ret = update_config(rcg, old_cfg);
+	if (ret)
+		pr_err("%s: %d update_config %u->%u failed (new clock index: %d)\n", __func__, ret, old_cfg, cfg, index);
+	return ret;
 }
 
 static int clk_rcg2_set_force_enable(struct clk_hw *hw)
@@ -489,7 +492,10 @@ static int clk_rcg2_configure(struct clk_rcg2 *rcg, const struct freq_tbl *f)
 	if (ret)
 		return ret;
 
-	return update_config(rcg, old_cfg);
+	ret = update_config(rcg, old_cfg);
+	if (ret)
+		pr_err("%s: %d update_config %u->%u failed (new clock index: %d)\n", __func__, ret, old_cfg, cfg, index);
+	return ret;
 }
 
 static void clk_rcg2_list_registers(struct seq_file *f, struct clk_hw *hw)
@@ -654,7 +660,10 @@ static int clk_rcg2_prepare(struct clk_hw *hw)
 		if (ret)
 			return ret;
 
-		return update_config(rcg, cfg);
+		ret = update_config(rcg, cfg);
+		if (ret)
+			pr_err("%s: %d update_config %u->%u failed\n", __func__, ret, cfg, cfg);
+		return ret;
 	}
 
 	return 0;
@@ -1366,7 +1375,10 @@ static int clk_gfx3d_set_rate_and_parent(struct clk_hw *hw, unsigned long rate,
 	if (ret)
 		return ret;
 
-	return update_config(rcg, old_cfg);
+	ret = update_config(rcg, old_cfg);
+	if (ret)
+		pr_err("%s: %d update_config %u->%u failed (new clock index: %d)\n", __func__, ret, old_cfg, cfg, index);
+	return ret;
 }
 
 static int clk_gfx3d_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -1529,7 +1541,11 @@ static int clk_gfx3d_src_set_rate_and_parent(struct clk_hw *hw,
 	if (ret)
 		return ret;
 
-	return update_config(rcg, old_cfg);
+
+	ret = update_config(rcg, old_cfg);
+	if (ret)
+		pr_err("%s: %d update_config %u->%u failed (new clock index: %d)\n", __func__, ret, old_cfg, cfg, index);
+	return ret;
 }
 
 const struct clk_ops clk_gfx3d_src_ops = {
