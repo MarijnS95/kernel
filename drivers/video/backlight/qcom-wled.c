@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#define DEBUG
+
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/ktime.h>
@@ -1082,9 +1084,12 @@ static int wled_configure(struct wled *wled, int version)
 			return rc;
 		}
 
+		dev_dbg(dev, "%s read %u\n", u32_opts[i].name, val);
+
 		c = UINT_MAX;
 		for (j = 0; c != val; j++) {
 			c = wled_values(u32_opts[i].cfg, j);
+			dev_dbg(dev, "wled_values for %u gives %u\n", j, c);
 			if (c == UINT_MAX) {
 				dev_err(dev, "invalid value for '%s'\n",
 					u32_opts[i].name);
@@ -1104,6 +1109,7 @@ static int wled_configure(struct wled *wled, int version)
 			*bool_opts[i].val_ptr = true;
 	}
 
+	dev_dbg(dev, "incrementing num_strings from %u to %u", cfg->num_strings, cfg->num_strings + 1);
 	cfg->num_strings = cfg->num_strings + 1;
 
 	string_len = of_property_count_elems_of_size(dev->of_node,
