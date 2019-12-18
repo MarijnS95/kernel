@@ -787,6 +787,7 @@ static int wled4_setup(struct wled *wled)
 
 	for (i = 0; i < wled->cfg.num_strings; i++) {
 		j = wled->cfg.enabled_strings[i];
+		dev_dbg(wled->dev, "%d enabled: %d\n", i, j);
 		temp = j + WLED4_SINK_REG_CURR_SINK_SHFT;
 		sink_en |= 1 << temp;
 	}
@@ -844,6 +845,8 @@ static int wled4_setup(struct wled *wled)
 				WLED3_CTRL_REG_MOD_EN_MASK);
 	if (rc < 0)
 		return rc;
+
+	dev_dbg(wled->dev, "Enabling sinks %#x\n", sink_en);
 
 	rc = regmap_update_bits(wled->regmap,
 				wled->sink_addr + WLED4_SINK_REG_CURR_SINK,
@@ -1186,6 +1189,7 @@ static int wled_configure(struct wled *wled, int version)
 		}
 		cfg->num_strings = string_len;
 	}
+	dev_dbg(wled->dev, "Reading %d returned %d\n", string_len, rc);
 
 	return 0;
 }
