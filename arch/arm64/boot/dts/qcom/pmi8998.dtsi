@@ -542,7 +542,7 @@
 			qcom,current-limit-microamp = <25000>;
 			qcom,current-boost-limit = <970>;
 			qcom,switching-freq = <800>; /* 800KHz */
-			qcom,enabled-strings = <0 1 2>;
+			qcom,num-strings = <3>;
 
 			qcom,pmic-revid = <&pmi8998_revid>;
 			status = "disabled";

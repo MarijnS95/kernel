@@ -221,7 +221,6 @@
 
 &pmi8998_wled {
 	status = "okay";
-	qcom,led-strings-list = [01 02];
 };
 
 &pmi8998_haptics {

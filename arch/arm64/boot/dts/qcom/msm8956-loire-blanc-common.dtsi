@@ -319,6 +319,7 @@
 			qcom,fdbk-output = "wled1";
 			qcom,current-boost-limit = <385>;
 			qcom,sync-dly-us = <0>;
+			qcom,fs-curr-ua = <10000>;
 			qcom,current-limit-microamp = <10000>;
 		};
 	};
