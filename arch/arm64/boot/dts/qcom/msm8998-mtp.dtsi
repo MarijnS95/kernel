@@ -313,7 +313,6 @@
 
 &pmi8998_wled {
 	status = "ok";
-	qcom,led-strings-list = [00 01];
 };
 
 &dsi_dual_nt35597_truly_video {

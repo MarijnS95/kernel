@@ -623,8 +623,7 @@
 };
 
 &pmi8998_wled {
-	linux,name = "wled";
-	qcom,string-cfg = <7>;
+	qcom,num-strings = <3>;
 	qcom,current-limit-microamp = <20000>;
 };
 

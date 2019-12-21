@@ -71,10 +71,6 @@
 	qcom,peripheral-size = <0x500000>;
 };
 
-&pm660l_wled {
-	qcom,led-strings-list = [01 02];
-};
-
 &soc {
 	qcom,msm-ssc-sensors {
 		compatible = "qcom,msm-ssc-sensors";
@@ -158,10 +154,6 @@
 	qcom,aux-en-gpio = <&tlmm 55 0>;
 	qcom,aux-sel-gpio = <&tlmm 56 0>;
 	qcom,usbplug-cc-gpio = <&tlmm 58 0>;
-};
-
-&pm660l_wled {
-	qcom,led-strings-list = [01 02];
 };
 
 &dsi_nt35695b_truly_fhd_video {

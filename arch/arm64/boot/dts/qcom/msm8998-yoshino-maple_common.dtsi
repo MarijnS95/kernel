@@ -293,6 +293,7 @@
 };
 
 &pmi8998_wled {
+	/* Bootloader only properties */
 	somc,calc-curr;
 	somc,area_count_table_size = <24>;
 	somc,area_count_table = <0 117 234 351 468 585 702 819

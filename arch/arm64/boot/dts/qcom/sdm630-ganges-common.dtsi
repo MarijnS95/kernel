@@ -156,8 +156,8 @@
 };
 
 &pm660l_wled {
+	qcom,num-strings = <2>;
 	qcom,current-limit-microamp = <20000>;
-	qcom,enabled-strings = <0 1>;
 
 	/* Bootloader only properties */
 	somc,init-br-ua = <10000>;
