@@ -356,7 +356,7 @@ unlock_mutex:
 
 static void wled_auto_string_detection(struct wled *wled)
 {
-	int rc = 0, i;
+	int rc = 0, i, reg;
 	u32 sink_config = 0, int_sts;
 	u8 sink_test = 0, sink_valid = 0, val;
 
@@ -407,14 +407,15 @@ static void wled_auto_string_detection(struct wled *wled)
 
 	/* Iterate through the strings one by one */
 	for (i = 0; i < wled->cfg.num_strings; i++) {
-		sink_test = BIT((WLED4_SINK_REG_CURR_SINK_SHFT + i));
+		reg = wled->cfg.enabled_strings[i];
+		sink_test = BIT((WLED4_SINK_REG_CURR_SINK_SHFT + reg));
 
 		/* Enable feedback control */
 		rc = regmap_write(wled->regmap, wled->ctrl_addr +
-				  WLED3_CTRL_REG_FEEDBACK_CONTROL, i + 1);
+				  WLED3_CTRL_REG_FEEDBACK_CONTROL, reg + 1);
 		if (rc < 0) {
 			dev_err(wled->dev, "Failed to enable feedback for SINK %d rc = %d\n",
-				i + 1, rc);
+				reg + 1, rc);
 			goto failed_detect;
 		}
 
@@ -423,7 +424,7 @@ static void wled_auto_string_detection(struct wled *wled)
 				  WLED4_SINK_REG_CURR_SINK, sink_test);
 		if (rc < 0) {
 			dev_err(wled->dev, "Failed to configure SINK %d rc=%d\n",
-				i + 1, rc);
+				reg + 1, rc);
 			goto failed_detect;
 		}
 
@@ -451,7 +452,7 @@ static void wled_auto_string_detection(struct wled *wled)
 
 		if (int_sts & WLED3_CTRL_REG_OVP_FAULT_STATUS)
 			dev_dbg(wled->dev, "WLED OVP fault detected with SINK %d\n",
-				i + 1);
+				reg + 1);
 		else
 			sink_valid |= sink_test;
 
