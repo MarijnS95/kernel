@@ -397,6 +397,8 @@
 				qcom,ramp-pause-lo-count = <2>;
 				qcom,ramp-low-index = <0>;
 				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
 			};
 
 			lpg5 {
@@ -406,6 +408,8 @@
 				qcom,ramp-pause-lo-count = <2>;
 				qcom,ramp-low-index = <0>;
 				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
 			};
 
 			lpg6 {
