@@ -1713,6 +1713,11 @@ static void module_on_master(void *device_data)
 
 	ret = sec_ts_start_device(ts);
 
+	if (ts->input_dev->disabled) {
+		sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
+		ts->power_status = SEC_TS_STATE_LPM;
+	}
+
 	if (ret == 0)
 		snprintf(buff, sizeof(buff), "%s", "OK");
 	else
@@ -2749,6 +2754,9 @@ void sec_ts_run_rawdata_all(struct sec_ts_data *ts, bool full_read)
 	u8 test_type[5] = {TYPE_AMBIENT_DATA, TYPE_DECODED_DATA,
 		TYPE_SIGNAL_DATA, TYPE_OFFSET_DATA_SET, TYPE_OFFSET_DATA_SDC};
 
+#ifdef CONFIG_TOUCHSCREEN_DUMP_MODE
+	ts->tsp_dump_lock = 1;
+#endif
 	input_info(true, &ts->client->dev,
 			"%s: start (noise:%d, wet:%d)##\n",
 			__func__, ts->touch_noise_status, ts->wet_mode);
@@ -2806,7 +2814,9 @@ out:
 
 	input_info(true, &ts->client->dev, "%s: done (noise:%d, wet:%d)##\n",
 			__func__, ts->touch_noise_status, ts->wet_mode);
-
+#ifdef CONFIG_TOUCHSCREEN_DUMP_MODE
+	ts->tsp_dump_lock = 0;
+#endif
 	sec_ts_locked_release_all_finger(ts);
 }
 
@@ -2818,6 +2828,14 @@ static void run_rawdata_read_all(void *device_data)
 
 	sec_cmd_set_default_result(sec);
 
+#ifdef CONFIG_TOUCHSCREEN_DUMP_MODE
+	if (ts->tsp_dump_lock == 1) {
+		input_err(true, &ts->client->dev, "%s: already checking now\n", __func__);
+		snprintf(buff, sizeof(buff), "NG");
+		sec->cmd_state = SEC_CMD_STATUS_FAIL;
+		goto out;
+	}
+#endif
 	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
 		input_err(true, &ts->client->dev, "%s: IC is power off\n", __func__);
 		snprintf(buff, sizeof(buff), "NG");
@@ -3168,15 +3186,36 @@ static void drawing_test_enable(void *device_data)
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
-
+#ifdef SEC_TS_SUPPORT_CUSTOMLIB
+	int ret;
+#endif
 	sec_cmd_set_default_result(sec);
 
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
 		snprintf(buff, sizeof(buff), "%s", "NG");
 		sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	} else {
-		snprintf(buff, sizeof(buff), "%s", "NA");
-		sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
+		if (ts->use_customlib) {
+			if (sec->cmd_param[0])
+				ts->lowpower_mode &= ~SEC_TS_MODE_CUSTOMLIB_FORCE_KEY;
+			else
+				ts->lowpower_mode |= SEC_TS_MODE_CUSTOMLIB_FORCE_KEY;
+
+			#ifdef SEC_TS_SUPPORT_CUSTOMLIB
+			ret = sec_ts_set_custom_library(ts);
+			if (ret < 0) {
+				snprintf(buff, sizeof(buff), "%s", "NG");
+				sec->cmd_state = SEC_CMD_STATUS_FAIL;
+			} else {
+				snprintf(buff, sizeof(buff), "%s", "OK");
+				sec->cmd_state = SEC_CMD_STATUS_OK;
+			}
+			#endif
+
+		} else {
+			snprintf(buff, sizeof(buff), "%s", "NA");
+			sec->cmd_state = SEC_CMD_STATUS_NOT_APPLICABLE;
+		}
 	}
 
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -3515,7 +3554,7 @@ static void run_trx_short_test_all(void *device_data)
 	}
 
 	memset(rBuff, 0x00, size);
-	memset(data, 0x00, 24);
+	memset(data, 0x00, 32);
 
 	input_info(true, &ts->client->dev, "%s: Read self test result\n", __func__);
 
@@ -3795,8 +3834,10 @@ int sec_ts_execute_force_calibration(struct sec_ts_data *ts, int cal_mode)
 	else if (cal_mode == AMBIENT_CAL)
 		cmd = SEC_TS_CMD_CALIBRATION_AMBIENT;
 #endif
+#ifdef USE_PRESSURE_SENSOR
 	else if (cal_mode == PRESSURE_CAL)
 		cmd = SEC_TS_CMD_CALIBRATION_PRESSURE;
+#endif
 	else
 		return rc;
 
@@ -3953,8 +3994,10 @@ static void set_lowpower_mode(void *device_data)
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
+	mutex_lock(&ts->aod_mutex);
 	if (!ts->plat_data->aod_mode.supported) {
 		input_err(true, &ts->client->dev, "aod_mode is not supported.\n");
+		mutex_unlock(&ts->aod_mutex);
 		return;
 	}
 	sec_cmd_set_default_result(sec);
@@ -3969,19 +4012,22 @@ static void set_lowpower_mode(void *device_data)
 	}
 
 	if (sec_ts_get_pw_status() || !ts->after_work.done || (ts->power_status == SEC_TS_STATE_POWER_OFF)) {
-		input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
-		goto update_skip;
+		ts->aod_pending = true;
+		ts->aod_pending_lowpower_mode = sec->cmd_param[0];
+		input_info(true, &ts->client->dev,
+			"Postponing lowpower_mode: %d\n",
+			ts->aod_pending_lowpower_mode);
+	} else {
+		/* set lowpower mode by spay, edge_swipe function. */
+		ts->lowpower_mode = sec->cmd_param[0];
+		sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
 	}
 
-	/* set lowpower mode by spay, edge_swipe function. */
-	ts->lowpower_mode = sec->cmd_param[0];
-	sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
-
 NG:
-update_skip:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
 	sec_cmd_set_cmd_exit(sec);
+	mutex_unlock(&ts->aod_mutex);
 	return;
 
 }
@@ -4058,7 +4104,20 @@ static void spay_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
+	if (sec->cmd_param[0]) {
+		if (ts->use_customlib)
+			ts->lowpower_mode |= SEC_TS_MODE_CUSTOMLIB_SPAY;
+	} else {
+		if (ts->use_customlib)
+			ts->lowpower_mode &= ~SEC_TS_MODE_CUSTOMLIB_SPAY;
+	}
+
 	input_info(true, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
+
+	#ifdef SEC_TS_SUPPORT_CUSTOMLIB
+	if (ts->use_customlib)
+		sec_ts_set_custom_library(ts);
+	#endif
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
@@ -4088,7 +4147,20 @@ static void aod_enable(void *device_data)
 	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1)
 		goto NG;
 
+	if (sec->cmd_param[0]) {
+		if (ts->use_customlib)
+			ts->lowpower_mode |= SEC_TS_MODE_CUSTOMLIB_AOD;
+	} else {
+		if (ts->use_customlib)
+			ts->lowpower_mode &= ~SEC_TS_MODE_CUSTOMLIB_AOD;
+	}
+
 	input_info(true, &ts->client->dev, "%s: %02X\n", __func__, ts->lowpower_mode);
+
+	#ifdef SEC_TS_SUPPORT_CUSTOMLIB
+	if (ts->use_customlib)
+		sec_ts_set_custom_library(ts);
+	#endif
 
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
