@@ -1713,10 +1713,10 @@ static void module_on_master(void *device_data)
 
 	ret = sec_ts_start_device(ts);
 
-	if (ts->input_dev->disabled) {
-		sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
-		ts->power_status = SEC_TS_STATE_LPM;
-	}
+	// if (ts->input_dev->disabled) {
+	// 	sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
+	// 	ts->power_status = SEC_TS_STATE_LPM;
+	// }
 
 	if (ret == 0)
 		snprintf(buff, sizeof(buff), "%s", "OK");
@@ -3412,9 +3412,9 @@ static void run_trx_short_test(void *device_data)
 	}
 
 	input_info(true, &ts->client->dev, "%s: self test start\n", __func__);
-	
+
 	data[0] = 0x04;
-	
+
 	rc = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_SELFTEST, data, 1);
 	if (rc < 0) {
 		input_err(true, &ts->client->dev, "%s: Send selftest cmd failed!\n", __func__);
@@ -3554,7 +3554,9 @@ static void run_trx_short_test_all(void *device_data)
 	}
 
 	memset(rBuff, 0x00, size);
-	memset(data, 0x00, 32);
+	// WTF
+	// memset(data, 0x00, 32);
+	memset(data, 0x00, sizeof(data));
 
 	input_info(true, &ts->client->dev, "%s: Read self test result\n", __func__);
 

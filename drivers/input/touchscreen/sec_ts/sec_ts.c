@@ -2485,24 +2485,24 @@ static void sec_ts_reset_work(struct work_struct *work)
 		return;
 	}
 
-	if (ts->input_dev_touch->disabled) {
-		input_err(true, &ts->client->dev , "%s: call input_close\n", __func__);
+	// if (ts->input_dev_touch->disabled) {
+	// 	input_err(true, &ts->client->dev , "%s: call input_close\n", __func__);
 
-		if (ts->lowpower_mode) {
-			ret = sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
-			if (ret < 0) {
-				input_err(true, &ts->client->dev, "%s: failed to reset, ret:%d\n", __func__, ret);
-				ts->reset_is_on_going = false;
-				cancel_delayed_work(&ts->reset_work);
-				schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
-				mutex_unlock(&ts->modechange);
-				pm_relax(&ts->client->dev);
-				return;
-			}
-		} else {
-			sec_ts_stop_device(ts);
-		}
-	}
+	// 	if (ts->lowpower_mode) {
+	// 		ret = sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
+	// 		if (ret < 0) {
+	// 			input_err(true, &ts->client->dev, "%s: failed to reset, ret:%d\n", __func__, ret);
+	// 			ts->reset_is_on_going = false;
+	// 			cancel_delayed_work(&ts->reset_work);
+	// 			schedule_delayed_work(&ts->reset_work, msecs_to_jiffies(TOUCH_RESET_DWORK_TIME));
+	// 			mutex_unlock(&ts->modechange);
+	// 			pm_relax(&ts->client->dev);
+	// 			return;
+	// 		}
+	// 	} else {
+	// 		sec_ts_stop_device(ts);
+	// 	}
+	// }
 	ts->reset_is_on_going = false;
 	mutex_unlock(&ts->modechange);
 	pm_relax(&ts->client->dev);
@@ -2847,11 +2847,11 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 
 #ifndef TOUCH_DRIVER_NOT_SOD_PROXIMITY
 	if (ts->plat_data->sod_mode.status) {
-		display_sod_mode = incell_get_display_sod_mode();
+		display_sod_mode = incell_get_display_sod();
 		if ((!ts->cover_set && ts->flip_enable) || display_sod_mode) {
 			input_dbg(true, &ts->client->dev, "%s: sod skip - SEC_TS_STATE_POWER_OFF\n", __func__);
 			ts->power_status = SEC_TS_STATE_POWER_OFF;
-			incell_control_touch_power();
+			somc_panel_external_control_touch_power(false);
 		} else {
 			sec_ts_set_irq(ts, true);
 			sec_ts_set_lowpowermode(ts, TO_LOWPOWER_MODE);
