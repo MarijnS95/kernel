@@ -727,6 +727,8 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					event_buff[0], event_buff[1], event_buff[2], event_buff[3],
 					event_buff[4], event_buff[5], event_buff[6], event_buff[7]);
 
+		pr_info("%s: %d\n", __func__, event_id);
+
 		switch (event_id) {
 		case SEC_TS_STATUS_EVENT:
 			p_event_status = (struct sec_ts_event_status *)event_buff;
@@ -1095,6 +1097,8 @@ skip_process:
 static irqreturn_t sec_ts_irq_thread(int irq, void *ptr)
 {
 	struct sec_ts_data *ts = (struct sec_ts_data *)ptr;
+
+	pr_info("%s\n", __func__);
 
 	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
 		return IRQ_HANDLED;
@@ -2996,6 +3000,13 @@ err:
 		return lock_ret;
 	}
 	input_info(true, &ts->client->dev, "%s: end\n", __func__);
+
+	ret = sec_ts_read_information(ts);
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: fail to read information 0x%x\n", __func__, ret);
+		goto err;
+	}
+
 	mutex_unlock(&ts->device_mutex);
 	return ret;
 }
