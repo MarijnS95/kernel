@@ -1141,6 +1141,47 @@ static ssize_t somc_panel_colormgr_pcc_profile_avail_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
 }
 
+static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display);
+
+static ssize_t somc_panel_colormgr_pcc_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr;
+	struct drm_msm_pcc *pcc;
+	int rc;
+
+	if (!display || !display->panel || !display->panel->spec_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
+
+	pcc = &color_mgr->cached_pcc;
+
+	memset(pcc, 0, sizeof(*pcc));
+
+	if (sscanf(buf, "%u %u %u", &pcc->r.r, &pcc->g.g, &pcc->b.b) < 0) {
+		pr_err("%s: Invalid input format, expected"
+				" integers \"r g b\"\n", __func__);
+		return -EINVAL;
+	}
+
+	if (pcc->r.r > 0x8000 || pcc->g.g > 0x8000 || pcc->b.b > 0x8000) {
+		pr_err("%s: One or more arguments larger than %d\n",
+				__func__, 0x8000);
+		return -EINVAL;
+	}
+
+	rc = somc_panel_crtc_send_cached_pcc(display);
+	if (rc) {
+		pr_err("%s: Failed to set custom PCC %d\n", __func__, rc);
+		return rc;
+	}
+	return count;
+}
+
 static struct device_attribute colormgr_attributes[] = {
 	__ATTR(cc, S_IRUGO, somc_panel_std_pcc_show, NULL),
 	__ATTR(srgb_cc, S_IRUGO, somc_panel_srgb_pcc_show, NULL),
@@ -1155,6 +1196,9 @@ static struct device_attribute colormgr_attributes[] = {
 	__ATTR(pcc_profile_avail, S_IRUGO,
 				somc_panel_colormgr_pcc_profile_avail_show,
 				NULL),
+	__ATTR(pcc, S_IRUGO|S_IWUSR|S_IWGRP,
+				NULL, // somc_panel_colormgr_pcc_show,
+				somc_panel_colormgr_pcc_store),
 };
 
 int somc_panel_colormgr_register_attr(struct device *dev)
