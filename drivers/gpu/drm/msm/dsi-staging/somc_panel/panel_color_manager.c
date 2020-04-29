@@ -1141,6 +1141,29 @@ static ssize_t somc_panel_colormgr_pcc_profile_avail_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
 }
 
+static ssize_t somc_panel_colormgr_pcc_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr;
+	struct drm_msm_pcc *pcc;
+
+	if (!display || !display->panel || !display->panel->spec_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
+
+	pcc = &color_mgr->cached_pcc;
+
+	return scnprintf(buf, PAGE_SIZE, "0x%x 0x%x 0x%x\n",
+			pcc->r.r,
+			pcc->g.g,
+			pcc->b.b);
+}
+
+
 static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display);
 
 static ssize_t somc_panel_colormgr_pcc_store(struct device *dev,
@@ -1162,10 +1185,13 @@ static ssize_t somc_panel_colormgr_pcc_store(struct device *dev,
 
 	memset(pcc, 0, sizeof(*pcc));
 
-	if (sscanf(buf, "%u %u %u", &pcc->r.r, &pcc->g.g, &pcc->b.b) < 0) {
-		pr_err("%s: Invalid input format, expected"
-				" integers \"r g b\"\n", __func__);
-		return -EINVAL;
+	if (sscanf(buf, "%u %u %u", &pcc->r.r, &pcc->g.g, &pcc->b.b) < 3) {
+		pr_notice("Trying hexadecimal\n");
+		if (sscanf(buf, "0x%x 0x%x 0x%x", &pcc->r.r, &pcc->g.g, &pcc->b.b) < 3) {
+			pr_err("%s: Invalid input format, expected"
+					" integers \"r g b\"\n", __func__);
+			return -EINVAL;
+		}
 	}
 
 	if (pcc->r.r > 0x8000 || pcc->g.g > 0x8000 || pcc->b.b > 0x8000) {
@@ -1197,7 +1223,7 @@ static struct device_attribute colormgr_attributes[] = {
 				somc_panel_colormgr_pcc_profile_avail_show,
 				NULL),
 	__ATTR(pcc, S_IRUGO|S_IWUSR|S_IWGRP,
-				NULL, // somc_panel_colormgr_pcc_show,
+				somc_panel_colormgr_pcc_show,
 				somc_panel_colormgr_pcc_store),
 };
 
