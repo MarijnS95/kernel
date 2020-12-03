@@ -236,6 +236,10 @@
 	qcom,led-mask = <1>;
 };
 
+&pm660l_lpg {
+	qcom,sync-channel-ids = <1 2 3>;
+};
+
 &mdss_fb0 {
 	/delete-node/ qcom,cont-splash-memory;
 };
