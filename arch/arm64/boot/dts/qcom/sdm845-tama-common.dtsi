@@ -646,10 +646,6 @@
 };
 
 &pmi8998_lsid1 {
-	qcom,leds@d000 {
-		qcom,rgb_sync = <1>;
-	};
-
 	qcom,leds-xboot@d800 {
 		compatible = "qcom,qpnp-wled";
 		reg = <0xd800 0x100>,
@@ -686,74 +682,16 @@
 	};
 };
 
+&pmi8998_pwms {
+	qcom,sync-channel-ids = <3 4 5>;
+};
+
 &pmi8998_haptics {
 	/delete-property/ qcom,en-brake;
 	/delete-property/ qcom,lra-auto-mode;
 	qcom,wave-shape = "sine";
 	qcom,wave-play-rate-us = <8621>;
 };
-
-/*
-&red_led {
-	somc,pwm-channel = <4>;
-	linux,name = "led:rgb_red";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-
-&green_led {
-	somc,pwm-channel = <3>;
-	linux,name = "led:rgb_green";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-
-&blue_led {
-	somc,pwm-channel = <2>;
-	linux,name = "led:rgb_blue";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-*/
 
 &flash_led {
 	qcom,hw-strobe-option = <1>;
