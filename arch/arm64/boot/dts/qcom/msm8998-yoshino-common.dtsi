@@ -3252,7 +3252,6 @@
 &pmi8998_lsid1 {
 	qcom,leds@d000 {
 		status = "okay";
-		qcom,rgb_sync = <1>;
 	};
 
 	qcom,leds-xboot@d800 {
@@ -3289,6 +3288,10 @@
 		somc,area_count_table_size = <0>;
 		status = "okay";
 	};
+};
+
+&pmi8998_pwms {
+	qcom,sync-channel-ids = <3 4 5>;
 };
 
 &spmi_bus {
