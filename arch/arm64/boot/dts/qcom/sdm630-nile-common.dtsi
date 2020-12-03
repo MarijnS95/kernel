@@ -428,8 +428,11 @@
 &pm660l_3 {
 	qcom,leds@d000 {
 		status = "okay";
-		qcom,rgb_sync = <1>;
 	};
+};
+
+&pm660l_lpg {
+	qcom,sync-channel-ids = <1 2 3>;
 };
 
 &pm660_vadc {
