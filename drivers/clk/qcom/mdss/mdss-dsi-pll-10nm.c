@@ -650,7 +650,8 @@ static void dsi_pll_commit(struct dsi_pll_10nm *pll,
 		       reg->frac_div_start_mid);
 	MDSS_PLL_REG_W(pll_base, PLL_FRAC_DIV_START_HIGH_1,
 		       reg->frac_div_start_high);
-	MDSS_PLL_REG_W(pll_base, PLL_PLL_LOCKDET_RATE_1, 0x40);
+	MDSS_PLL_REG_W(pll_base, PLL_PLL_LOCKDET_RATE_1,
+		       reg->pll_lockdet_rate);
 	MDSS_PLL_REG_W(pll_base, PLL_PLL_LOCK_DELAY, 0x06);
 	MDSS_PLL_REG_W(pll_base, PLL_CMODE, 0x10);
 	MDSS_PLL_REG_W(pll_base, PLL_CLOCK_INVERTERS, reg->pll_clock_inverters);
