@@ -211,7 +211,7 @@
 				qcom,mdss-dsc-encoders = <2>;
 				qcom,mdss-dsc-block-prediction-enable;
 
-				qcom,mdss-dsi-panel-clockrate = <970452940>;
+				// qcom,mdss-dsi-panel-clockrate = <970452940>;
 			};
 		};
 	};

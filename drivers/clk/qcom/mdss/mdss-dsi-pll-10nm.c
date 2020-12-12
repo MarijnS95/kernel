@@ -462,20 +462,14 @@ static void dsi_pll_calc_dec_frac(struct dsi_pll_10nm *pll,
 	struct dsi_pll_regs *regs = &pll->reg_setup;
 	u64 fref = rsc->vco_ref_clk_rate;
 	u64 pll_freq;
-	u64 divider;
 	u64 dec, dec_multiple;
 	u32 frac;
 	u64 multiplier;
 
 	pll_freq = rsc->vco_current_rate;
 
-	if (config->disable_prescaler)
-		divider = fref;
-	else
-		divider = fref * 2;
-
 	multiplier = 1 << config->frac_bits;
-	dec_multiple = div_u64(pll_freq * multiplier, divider);
+	dec_multiple = div_u64(pll_freq * multiplier, fref);
 	dec = div_u64_rem(dec_multiple, multiplier, &frac);
 
 	if (pll_freq <= MHZ_1900)
@@ -570,9 +564,11 @@ static void dsi_pll_ssc_commit(struct dsi_pll_10nm *pll,
 static void dsi_pll_config_hzindep_reg(struct dsi_pll_10nm *pll,
 				  struct mdss_pll_resources *rsc)
 {
+	struct dsi_pll_config *config = &pll->pll_configuration;
 	void __iomem *pll_base = rsc->pll_base;
+	u32 val = config->disable_prescaler ? 0x0 : 0x80;
 
-	MDSS_PLL_REG_W(pll_base, PLL_ANALOG_CONTROLS_ONE, 0x80);
+	MDSS_PLL_REG_W(pll_base, PLL_ANALOG_CONTROLS_ONE, val);
 	MDSS_PLL_REG_W(pll_base, PLL_ANALOG_CONTROLS_TWO, 0x03);
 	MDSS_PLL_REG_W(pll_base, PLL_ANALOG_CONTROLS_THREE, 0x00);
 	MDSS_PLL_REG_W(pll_base, PLL_DSM_DIVIDER, 0x00);
@@ -1213,16 +1209,29 @@ static unsigned long vco_10nm_recalc_rate(struct clk_hw *hw,
 						unsigned long parent_rate)
 {
 	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
-	struct mdss_pll_resources *pll = vco->priv;
+	struct mdss_pll_resources *rsc = vco->priv;
+	struct dsi_pll_regs *regs;
+	struct dsi_pll_10nm *pll;
+	struct dsi_pll_config *config;
 	int rc;
+	u64 multiplier, vco_rate, tmp64;
+	u32 frac, dec;
 
 	if (!vco->priv)
 		pr_err("vco priv is null\n");
 
-	if (!pll) {
+	if (!rsc) {
 		pr_err("pll is null\n");
 		return 0;
 	}
+
+	pll = rsc->priv;
+	if (!pll) {
+		pr_err("pll configuration not found\n");
+		return -EINVAL;
+	}
+	regs = &pll->reg_setup;
+	config = &pll->pll_configuration;
 
 	/*
 	 * In the case when vco arte is set, the recalculation function should
@@ -1230,24 +1239,47 @@ static unsigned long vco_10nm_recalc_rate(struct clk_hw *hw,
 	 * again. However durng handoff, recalculation should set the flag
 	 * according to the status of PLL.
 	 */
-	if (pll->vco_current_rate != 0) {
-		pr_debug("returning vco rate = %lld\n", pll->vco_current_rate);
-		return pll->vco_current_rate;
-	}
+	// if (pll->vco_current_rate != 0) {
+	// 	pr_debug("returning vco rate = %lld\n", pll->vco_current_rate);
+	// 	return pll->vco_current_rate;
+	// }
 
-	rc = mdss_pll_resource_enable(pll, true);
+	rc = mdss_pll_resource_enable(rsc, true);
 	if (rc) {
 		pr_err("failed to enable pll(%d) resource, rc=%d\n",
-		       pll->index, rc);
+		       rsc->index, rc);
 		return 0;
 	}
 
-	if (!dsi_pll_10nm_lock_status(pll))
-		pll->handoff_resources = true;
+	if (!dsi_pll_10nm_lock_status(rsc))
+		rsc->handoff_resources = true;
 
-	(void)mdss_pll_resource_enable(pll, false);
+	(void)mdss_pll_resource_enable(rsc, false);
 
-	return rc;
+	pr_err("Ref %llu vs parent %llu\n", rsc->vco_ref_clk_rate, (u64)parent_rate);
+	WARN_ON(rsc->vco_ref_clk_rate != parent_rate);
+
+	if (parent_rate == 0)
+		return 0;
+
+	dec = regs->decimal_div_start;
+	frac = regs->frac_div_start_low;
+	frac |= regs->frac_div_start_mid << 8;
+	frac |= regs->frac_div_start_high << 16;
+
+	multiplier = 1 << config->frac_bits;
+	vco_rate = dec * parent_rate;
+	tmp64 = parent_rate * frac;
+	vco_rate += div_u64(tmp64, multiplier);
+
+	if (config->disable_prescaler)
+		vco_rate = div_u64(vco_rate, 2);
+
+	pr_err("Returning rate %llu (vs current %llu)\n", vco_rate, rsc->vco_current_rate);
+
+	WARN_ON(rsc->vco_current_rate != vco_rate);
+
+	return vco_rate;
 }
 
 static int pixel_clk_get_div(void *context, unsigned int reg, unsigned int *div)
