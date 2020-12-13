@@ -1226,9 +1226,9 @@ static unsigned long vco_10nm_recalc_rate(struct clk_hw *hw,
 	}
 
 	/*
-	 * In the case when vco arte is set, the recalculation function should
+	 * In the case when vco rate is set, the recalculation function should
 	 * return the current rate as to avoid trying to set the vco rate
-	 * again. However durng handoff, recalculation should set the flag
+	 * again. However during handoff, recalculation should set the flag
 	 * according to the status of PLL.
 	 */
 	if (pll->vco_current_rate != 0) {
