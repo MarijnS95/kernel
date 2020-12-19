@@ -526,7 +526,7 @@ static int qpnp_lpg_set_sdam_ramp_config(struct qpnp_lpg_channel *lpg)
 	u8 addr, mask, val;
 	int rc = 0;
 
-	/* clear PBS scatchpad register */
+	/* clear PBS scratchpad register */
 	val = 0;
 	rc = qpnp_lpg_sdam_write(lpg,
 			SDAM_PBS_SCRATCH_LUT_COUNTER_OFFSET, val);
@@ -1137,10 +1137,26 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 		return -EINVAL;
 	}
 
-	percentages = kcalloc(output_pattern->num_entries,
-				sizeof(u32), GFP_KERNEL);
+	percentages = lpg->ramp_config.pattern;
+
+	if (output_pattern->num_entries != lpg->ramp_config.pattern_length
+		// TODO: Ptr comparison assumes lo_idx was 0 (but I think it should mean something else anyway)
+		|| percentages == lpg->chip->lut->pattern) {
+		if (percentages != lpg->chip->lut->pattern)
+			devm_kfree(lpg->chip->dev, percentages);
+
+		// Be nice in case the alloc fails below
+		lpg->ramp_config.pattern = NULL;
+
+		percentages = devm_kcalloc(lpg->chip->dev, output_pattern->num_entries,
+				sizeof(*percentages), GFP_KERNEL);
+	}
+
 	if (!percentages)
 		return -ENOMEM;
+
+	lpg->ramp_config.pattern = percentages;
+	lpg->ramp_config.pattern_length = output_pattern->num_entries;
 
 	period_ns = pwm_get_period_extend(pwm);
 	for (i = 0; i < output_pattern->num_entries; i++) {
@@ -1148,7 +1164,7 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 		if (duty_ns > period_ns) {
 			dev_err(lpg->chip->dev, "duty %lluns is larger than period %lluns\n",
 					duty_ns, period_ns);
-			goto err;
+			return -EINVAL;
 		}
 		/* Translate the pattern in duty_ns to percentage */
 		tmp = (u64)duty_ns * 100;
@@ -1160,12 +1176,10 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	if (rc < 0) {
 		dev_err(lpg->chip->dev, "Set LUT pattern failed for LPG%d, rc=%d\n",
 				lpg->lpg_idx, rc);
-		goto err;
+		return rc;
 	}
 
 	lpg->lut_written = true;
-	memcpy(lpg->ramp_config.pattern, percentages,
-			output_pattern->num_entries);
 	lpg->ramp_config.hi_idx = lpg->ramp_config.lo_idx +
 				output_pattern->num_entries - 1;
 
@@ -1177,8 +1191,6 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	if (rc < 0)
 		dev_err(pwm_chip->dev, "Config LPG%d ramping failed, rc=%d\n",
 				lpg->lpg_idx, rc);
-err:
-	kfree(percentages);
 
 	return rc;
 }
