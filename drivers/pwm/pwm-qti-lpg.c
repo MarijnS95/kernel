@@ -1547,7 +1547,7 @@ static int qpnp_lpg_parse_dt(struct qpnp_lpg_chip *chip)
 
 		ramp->pattern_length = ramp->hi_idx - ramp->lo_idx + 1;
 		ramp->pattern = &chip->lut->pattern[ramp->lo_idx];
-		lpg->max_pattern_length = ramp->pattern_length;
+		lpg->max_pattern_length = chip->use_sdam ? SDAM_LUT_COUNT_MAX : LPG_LUT_COUNT_MAX;
 
 		ramp->pattern_repeat = of_property_read_bool(child,
 				"qcom,ramp-pattern-repeat");
