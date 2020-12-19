@@ -119,6 +119,15 @@ static int __tri_led_config_pwm(struct qpnp_led_dev *led,
 {
 	struct pwm_state pstate;
 	int rc;
+	struct pwm_output_pattern pattern;
+	// TODO: SDAM has only 20 slots????
+				// qcom,ramp-low-index = <0>;
+				// qcom,ramp-high-index = <19>;
+			// qcom,lut-patterns = <0 0 0 14 28 42 56 70 84 100
+			// 			100 84 70 56 42 28 14 0 0 0>;
+	u64 duty_pattern[21]; // 0-9, 10, 9-0
+	u64 period_ns, tmp;
+	int i;
 
 	pwm_get_state(led->pwm_dev, &pstate);
 	pstate.enabled = !!(pwm->duty_ns != 0);
@@ -127,7 +136,37 @@ static int __tri_led_config_pwm(struct qpnp_led_dev *led,
 	pstate.output_type = led->led_setting.breath ?
 		PWM_OUTPUT_MODULATED : PWM_OUTPUT_FIXED;
 	/* Use default pattern in PWM device */
-	pstate.output_pattern = NULL;
+
+
+	if (led->led_setting.breath) {
+		period_ns = pwm_get_period_extend(led->pwm_dev);
+		tmp = 100 * NSEC_PER_MSEC;
+		do_div(tmp, period_ns);
+
+		// Come up with a linear pattern
+		for (i = 0; i < ARRAY_SIZE(duty_pattern) / 2; i++)
+			duty_pattern[i] = i * 10;
+		for (i = ARRAY_SIZE(duty_pattern) / 2; i < ARRAY_SIZE(duty_pattern); i++)
+			duty_pattern[i] = (ARRAY_SIZE(duty_pattern) - i - 1) * 10;
+
+		// Rescale pattern by last-written brightness
+		// Also rescale from percentage to pwm
+		for (i = 0; i < ARRAY_SIZE(duty_pattern); i++)
+			duty_pattern[i] = duty_pattern[i] * led->led_setting.brightness * period_ns / 100 / LED_FULL;
+
+		pattern = (struct pwm_output_pattern){
+			.duty_pattern = duty_pattern,
+			.num_entries = ARRAY_SIZE(duty_pattern),
+			.cycles_per_duty = tmp
+		};
+
+		// TODO: Driver does pointer comparison and keeps track of the previous pointer here!
+		// WTF!
+		pstate.output_pattern = &pattern;
+	} else {
+		pstate.output_pattern = NULL;
+	}
+	dev_dbg(led->chip->dev, "Setting pattern %p", pstate.output_pattern);
 	rc = pwm_apply_state(led->pwm_dev, &pstate);
 
 	if (rc < 0)
@@ -262,11 +301,11 @@ static int qpnp_tri_led_set(struct qpnp_led_dev *led)
 		led->blinking = true;
 		led->breathing = false;
 	} else if (led->led_setting.breath) {
-		led->cdev.brightness = LED_FULL;
+		led->cdev.brightness = brightness;
 		led->blinking = false;
 		led->breathing = true;
 	} else {
-		led->cdev.brightness = led->led_setting.brightness;
+		led->cdev.brightness = brightness;
 		led->blinking = false;
 		led->breathing = false;
 	}
@@ -386,7 +425,7 @@ static ssize_t breath_store(struct device *dev, struct device_attribute *attr,
 
 	led->led_setting.blink = false;
 	led->led_setting.breath = breath;
-	led->led_setting.brightness = breath ? LED_FULL : LED_OFF;
+	// led->led_setting.brightness = breath ? LED_FULL : LED_OFF;
 	rc = qpnp_tri_led_set(led);
 	if (rc < 0)
 		dev_err(led->chip->dev, "Set led failed for %s, rc=%d\n",
