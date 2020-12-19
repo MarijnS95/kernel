@@ -520,7 +520,7 @@ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state)
 			pwm->state.output_type = state->output_type;
 		}
 
-		if (state->output_pattern != pwm->state.output_pattern &&
+		if (/* state->output_pattern != pwm->state.output_pattern && */
 				state->output_pattern != NULL) {
 			if (!pwm->chip->ops->set_output_pattern)
 				return -ENOTSUPP;
