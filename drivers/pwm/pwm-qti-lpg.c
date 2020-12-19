@@ -118,6 +118,7 @@
 #define SDAM_PATTERN_CONFIG_OFFSET		0x1
 #define SDAM_END_INDEX_OFFSET			0x3
 #define SDAM_START_INDEX_OFFSET			0x4
+#define SDAM_PAUSE_OFFSET			0x5
 #define SDAM_PBS_SCRATCH_LUT_COUNTER_OFFSET	0x6
 
 /* SDAM_REG_LUT_EN */
@@ -525,6 +526,7 @@ static int qpnp_lpg_set_sdam_ramp_config(struct qpnp_lpg_channel *lpg)
 	struct lpg_ramp_config *ramp = &lpg->ramp_config;
 	u8 addr, mask, val;
 	int rc = 0;
+	int i;
 
 	/* clear PBS scratchpad register */
 	val = 0;
@@ -564,12 +566,29 @@ static int qpnp_lpg_set_sdam_ramp_config(struct qpnp_lpg_channel *lpg)
 		return rc;
 	}
 
+	val = ramp->pause_lo_count << SDAM_PAUSE_START_SHIFT | ramp->pause_hi_count;
+	rc |= qpnp_lpg_sdam_write(lpg, 5, val);
+	pr_err("Setting %#x\n", val);
+	for (i = 7; i < 14; i++)
+		rc |= qpnp_lpg_sdam_write(lpg, i, val);
+	if (rc < 0) {
+		dev_err(lpg->chip->dev, "Write SDAM_REG_PAUSE failed, rc=%d\n",
+					rc);
+		return rc;
+	}
+
 	/* Set LPG_PATTERN_CONFIG */
 	addr = SDAM_PATTERN_CONFIG_OFFSET;
-	mask = SDAM_PATTERN_LOOP_ENABLE;
-	val = 0;
+	mask = 0xf0 | SDAM_PATTERN_LOOP_ENABLE | SDAM_PATTERN_EN_PAUSE_START | SDAM_PATTERN_EN_PAUSE_END;
+	// val = 0;
+	// val <<= 4;
 	if (ramp->pattern_repeat)
 		val |= SDAM_PATTERN_LOOP_ENABLE;
+	if (ramp->pause_lo_count != 0)
+		val |= SDAM_PATTERN_EN_PAUSE_START;
+	if (ramp->pause_hi_count != 0)
+		val |= SDAM_PATTERN_EN_PAUSE_END;
+
 
 	rc = qpnp_lpg_sdam_masked_write(lpg, addr, mask, val);
 	if (rc < 0) {
@@ -1564,9 +1583,6 @@ static int qpnp_lpg_parse_dt(struct qpnp_lpg_chip *chip)
 		ramp->pattern_repeat = of_property_read_bool(child,
 				"qcom,ramp-pattern-repeat");
 
-		if (chip->use_sdam)
-			continue;
-
 		rc = of_property_read_u32(child,
 				"qcom,ramp-pause-hi-count", &tmp);
 		if (rc < 0)
@@ -1581,11 +1597,19 @@ static int qpnp_lpg_parse_dt(struct qpnp_lpg_chip *chip)
 		else
 			ramp->pause_lo_count = (u8)tmp;
 
+		if (chip->use_sdam)
+			continue;
+
+		// Ignored on SDAM
 		ramp->ramp_dir_low_to_hi = of_property_read_bool(child,
 				"qcom,ramp-from-low-to-high");
 
+		// TODO: Check if works on SDAM
 		ramp->toggle =  of_property_read_bool(child,
 				"qcom,ramp-toggle");
+
+		if (chip->use_sdam)
+			continue;
 
 		rc = qpnp_lpg_pwm_src_enable(lpg, true);
 		if (rc < 0) {

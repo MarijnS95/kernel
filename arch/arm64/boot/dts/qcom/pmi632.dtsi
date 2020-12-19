@@ -437,6 +437,8 @@
 			lpg@1 {
 				qcom,lpg-chan-id = <1>;
 				qcom,ramp-step-ms = <200>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
 				qcom,ramp-low-index = <0>;
 				qcom,ramp-high-index = <19>;
 				qcom,ramp-pattern-repeat;
@@ -445,6 +447,8 @@
 			lpg@2 {
 				qcom,lpg-chan-id = <2>;
 				qcom,ramp-step-ms = <200>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
 				qcom,ramp-low-index = <0>;
 				qcom,ramp-high-index = <19>;
 				qcom,ramp-pattern-repeat;
@@ -453,6 +457,8 @@
 			lpg@3 {
 				qcom,lpg-chan-id = <3>;
 				qcom,ramp-step-ms = <200>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
 				qcom,ramp-low-index = <0>;
 				qcom,ramp-high-index = <19>;
 				qcom,ramp-pattern-repeat;
