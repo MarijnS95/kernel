@@ -1123,6 +1123,7 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	u64 period_ns, duty_ns, tmp;
 	u32 *percentages;
 	int rc = 0, i;
+	int max_per_lpg;
 
 	lpg = pwm_dev_to_qpnp_lpg(pwm_chip, pwm);
 	if (lpg == NULL) {
@@ -1130,14 +1131,20 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 		return -ENODEV;
 	}
 
-	if (output_pattern->num_entries > lpg->max_pattern_length) {
+	max_per_lpg = lpg->max_pattern_length / 3;
+
+	if (output_pattern->num_entries > max_per_lpg) {
 		dev_err(lpg->chip->dev, "pattern length %d shouldn't exceed %d\n",
 				output_pattern->num_entries,
-				lpg->max_pattern_length);
+				max_per_lpg);
 		return -EINVAL;
 	}
 
-	percentages = lpg->ramp_config.pattern;
+	lpg->ramp_config.lo_idx = lpg->lpg_idx * max_per_lpg;
+	lpg->ramp_config.hi_idx = lpg->ramp_config.lo_idx +
+				output_pattern->num_entries - 1;
+
+	percentages = lpg->ramp_config.pattern + lpg->ramp_config.lo_idx;
 
 	period_ns = pwm_get_period_extend(pwm);
 	for (i = 0; i < output_pattern->num_entries; i++) {
@@ -1161,9 +1168,6 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	}
 
 	lpg->lut_written = true;
-	lpg->ramp_config.hi_idx = lpg->ramp_config.lo_idx +
-				output_pattern->num_entries - 1;
-
 	tmp = (u64)output_pattern->cycles_per_duty * period_ns;
 	do_div(tmp, NSEC_PER_MSEC);
 	lpg->ramp_config.step_ms = (u16)tmp;
