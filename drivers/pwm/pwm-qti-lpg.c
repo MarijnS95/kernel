@@ -1137,10 +1137,7 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 		return -EINVAL;
 	}
 
-	percentages = kcalloc(output_pattern->num_entries,
-				sizeof(u32), GFP_KERNEL);
-	if (!percentages)
-		return -ENOMEM;
+	percentages = lpg->ramp_config.pattern;
 
 	period_ns = pwm_get_period_extend(pwm);
 	for (i = 0; i < output_pattern->num_entries; i++) {
@@ -1148,7 +1145,7 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 		if (duty_ns > period_ns) {
 			dev_err(lpg->chip->dev, "duty %lluns is larger than period %lluns\n",
 					duty_ns, period_ns);
-			goto err;
+			return -EINVAL;
 		}
 		/* Translate the pattern in duty_ns to percentage */
 		tmp = (u64)duty_ns * 100;
@@ -1160,12 +1157,10 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	if (rc < 0) {
 		dev_err(lpg->chip->dev, "Set LUT pattern failed for LPG%d, rc=%d\n",
 				lpg->lpg_idx, rc);
-		goto err;
+		return rc;
 	}
 
 	lpg->lut_written = true;
-	memcpy(lpg->ramp_config.pattern, percentages,
-			output_pattern->num_entries);
 	lpg->ramp_config.hi_idx = lpg->ramp_config.lo_idx +
 				output_pattern->num_entries - 1;
 
@@ -1177,8 +1172,6 @@ static int qpnp_lpg_pwm_set_output_pattern(struct pwm_chip *pwm_chip,
 	if (rc < 0)
 		dev_err(pwm_chip->dev, "Config LPG%d ramping failed, rc=%d\n",
 				lpg->lpg_idx, rc);
-err:
-	kfree(percentages);
 
 	return rc;
 }
