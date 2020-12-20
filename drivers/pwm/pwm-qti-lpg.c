@@ -992,6 +992,24 @@ static int qpnp_lpg_pwm_src_enable(struct qpnp_lpg_channel *lpg, bool en)
 
 		qpnp_lpg_pbs_trigger_enable(lpg, en);
 
+		if (lpg->src_sel == LUT_PATTERN && en) {
+			for (i = 0; i < chip->num_lpgs; i++) {
+				if (chip->lpg_group == NULL)
+					break;
+				if (chip->lpg_group[i] == 0)
+					break;
+				lpg_idx = chip->lpg_group[i] - 1;
+				pwm = &chip->pwm_chip.pwms[lpg_idx];
+				if ((pwm_get_output_type(pwm) == PWM_OUTPUT_MODULATED)
+							&& pwm_is_enabled(pwm)) {
+					rc = qpnp_lpg_sdam_write(&chip->lpgs[lpg_idx],
+							SDAM_PBS_SCRATCH_LUT_COUNTER_OFFSET, 0);
+					if (rc < 0)
+						break;
+				}
+			}
+		}
+
 		return rc;
 	}
 
