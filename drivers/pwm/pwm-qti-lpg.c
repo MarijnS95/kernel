@@ -1312,7 +1312,7 @@ static void qpnp_lpg_pwm_dbg_show(struct pwm_chip *pwm_chip, struct seq_file *s)
 		ramp = &lpg->ramp_config;
 		if (pwm_get_output_type(pwm) == PWM_OUTPUT_MODULATED) {
 			seq_puts(s, "  ramping duty percentages:");
-			for (j = 0; j < ramp->pattern_length; j++)
+			for (j = ramp->lo_idx; j <= ramp->hi_idx; j++)
 				seq_printf(s, " %d", ramp->pattern[j]);
 			seq_puts(s, "\n");
 			seq_printf(s, "  ramping time per step: %dms\n",
