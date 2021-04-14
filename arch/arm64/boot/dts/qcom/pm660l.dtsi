@@ -75,7 +75,7 @@
 
 		pm660l_lpg: qcom,pwms@b100 {
 			compatible = "qcom,pwm-lpg";
-			reg = <0xb100 0x200>, <0xb042 0x7e>;
+			reg = <0xb100 0x400>, <0xb042 0x7e>;
 			reg-names = "lpg-base", "lut-base";
 			#pwm-cells = <2>;
 			qcom,pbs-client = <&pm660l_pbs>;
