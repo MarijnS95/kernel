@@ -15,7 +15,7 @@
  * the electrical parts.
  *
  * The driver has been based on the FPC driver from the Sony Open Devices
- * Project, and it's original cpcopyright notices have been included below to
+ * Project, and it's original copyright notices have been included below to
  * respect that.
  *
  * Copyright (c) 2015 Fingerprint Cards AB <tech@fingerprints.com>
