@@ -403,7 +403,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	if (val) {
 		dev_dbg(dev, "gpio triggered\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
-		return POLLIN | POLLRDNORM;
+		return EPOLLIN | EPOLLRDNORM;
 	}
 
 	/*
