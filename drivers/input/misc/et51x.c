@@ -78,6 +78,9 @@ static const char *const pctl_names[] = {
 	"et51x_reset_reset",
 	"et51x_reset_active",
 	"et51x_irq_active",
+	"et51x_irq_low",
+	"egis_vcc_high",
+	"egis_vcc_low",
 };
 
 struct et51x_data {
@@ -152,7 +155,7 @@ static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
 		usleep_range(ET51X_VDDANA_ON_US, ET51X_VDDANA_ON_US + 1000);
 	}
 
-	msleep(3);
+	// msleep(3);
 
 	return rc;
 }
@@ -263,8 +266,16 @@ static int device_prepare(struct et51x_data *et51x, bool enable)
 		rc = vreg_setup(et51x, true);
 		if (rc)
 			goto exit;
+
+		select_pin_ctl(et51x, "egis_vcc_high");
+		select_pin_ctl(et51x, "et51x_irq_active");
+		msleep(3);
 	} else if (!enable && et51x->prepared) {
 		(void)vreg_setup(et51x, false);
+		select_pin_ctl(et51x, "egis_vcc_low");
+		select_pin_ctl(et51x, "et51x_irq_low");
+		msleep(3);
+
 	exit:
 		et51x->prepared = false;
 	} else {
@@ -614,7 +625,7 @@ static int et51x_probe(struct platform_device *pdev)
 	rc = select_pin_ctl(et51x, "et51x_reset_reset");
 	if (rc)
 		goto exit;
-	rc = select_pin_ctl(et51x, "et51x_irq_active");
+	rc = select_pin_ctl(et51x, "et51x_irq_low");
 	if (rc)
 		goto exit;
 
