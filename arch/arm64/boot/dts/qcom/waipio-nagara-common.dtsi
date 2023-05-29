@@ -70,7 +70,7 @@
 		pinctrl-2 = <>;
 	};
 
-        bu520x1nvx {
+	bu520x1nvx {
 		compatible = "rohm,bu520x1nvx";
 
 		acc_cover {
@@ -87,9 +87,9 @@
 		regulator-name = "egistec-vcc-pm8450-gpio-1";
 		regulator-min-microvolt = <3800000>;
 		regulator-max-microvolt = <3800000>;
-		startup-delay-us = <2000>;
+		startup-delay-us = <3000000>;
 		enable-active-high;
-		gpio = <&pm8450_gpios 1 0>;
+		gpio = <&pm8450_gpios 1 GPIO_ACTIVE_HIGH>;
 
 		/*
 		 * Use a "parent" supply just to be able to turn on this VCC gpio and
@@ -101,7 +101,7 @@
 	et6xx {
 		compatible = "egistec,et580";
 
-		et51x,gpio_irq = <&tlmm 40 0x0>;
+		et51x,gpio_irq = <&tlmm 40 0>;
 		et51x,no-low-voltage-probe;
 		et51x,vana-voltage = <3800000>;
 		vdd_ana-supply = <&egistec_vcc_pm8450_gpio_1>;
@@ -111,7 +111,7 @@
 				"et51x_irq_active";
 		pinctrl-0 = <&EGIS_RST_sleep>;
 		pinctrl-1 = <&EGIS_RST_active>;
-		pinctrl-2 = <&sm_gpio_40_input_no_pull>;
+		pinctrl-2 = <&sm_gpio_40/* _input_no_pull */>;
 	};
 
 	last_logs@ffcc0000 {

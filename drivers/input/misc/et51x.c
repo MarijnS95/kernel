@@ -33,6 +33,8 @@
  * as published by the Free Software Foundation.
  */
 
+#define DEBUG
+
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/gpio.h>
@@ -132,7 +134,8 @@ static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
 			voltage);
 
 	if (regulator_count_voltages(vreg) > 0) {
-		rc = regulator_set_voltage(vreg, voltage, voltage);
+		// rc = regulator_set_voltage(vreg, voltage, voltage);
+		rc = regulator_set_voltage(vreg, 3800000, 3960000);
 		if (rc)
 			dev_err(dev, "Unable to set voltage to %d: %d\n",
 					voltage, rc);
@@ -140,12 +143,16 @@ static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
 		dev_warn(dev, "No voltages available");
 	}
 
+	regulator_set_load(vreg, 1000000);
+
 	if (!regulator_is_enabled(vreg)) {
 		rc = regulator_enable(vreg);
 		if (rc)
 			dev_err(dev, "Unable to enable: %d\n", rc);
 		usleep_range(ET51X_VDDANA_ON_US, ET51X_VDDANA_ON_US + 1000);
 	}
+
+	msleep(3);
 
 	return rc;
 }
@@ -220,23 +227,27 @@ static int hw_reset(struct et51x_data *et51x)
 {
 	int irq_gpio;
 	struct device *dev = et51x->dev;
-	int rc = select_pin_ctl(et51x, "et51x_reset_active");
-	if (rc)
-		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
+	int rc;
+
+	// rc = select_pin_ctl(et51x, "et51x_reset_active");
+	// if (rc)
+	// 	goto exit;
+	// usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_reset");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 1000);
+	msleep(3);
+	// usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_ACTIVE_US, ET51X_RESET_ACTIVE_US + 1000);
+	msleep(3);
+	// usleep_range(ET51X_RESET_ACTIVE_US, ET51X_RESET_ACTIVE_US + 1000);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
-	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
+	dev_err(dev, "IRQ after reset %d\n", irq_gpio);
 exit:
 	return rc;
 }
