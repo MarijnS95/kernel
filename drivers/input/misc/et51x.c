@@ -545,17 +545,17 @@ static int et51x_probe(struct platform_device *pdev)
 
 	dev_dbg(dev, "low_voltage_probe: %d\n", et51x->low_voltage_probe);
 
-	if (et51x->low_voltage_probe)
-		/* Start at 1.8v which is the voltage used for FPC,
-		 * to err on the side of caution:
-		 */
-		rc = et51x_vreg_set_voltage(et51x->dev, et51x->vdd_ana,
-				1800000);
-	else
-		rc = vreg_setup(et51x, true);
+	// if (et51x->low_voltage_probe)
+	// 	/* Start at 1.8v which is the voltage used for FPC,
+	// 	 * to err on the side of caution:
+	// 	 */
+	// 	rc = et51x_vreg_set_voltage(et51x->dev, et51x->vdd_ana,
+	// 			1800000);
+	// else
+	// 	rc = vreg_setup(et51x, true);
 
-	if (rc)
-		goto exit_powerdown;
+	// if (rc)
+	// 	goto exit_powerdown;
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
@@ -622,13 +622,13 @@ static int et51x_probe(struct platform_device *pdev)
 
 	dev_info(dev, "%s: ok\n", __func__);
 
-	if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
-		dev_info(dev, "Leaving power enabled\n");
-		goto exit;
-	}
+	// if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
+	// 	dev_info(dev, "Leaving power enabled\n");
+	// 	goto exit;
+	// }
 
 exit_powerdown:
-	(void)vreg_setup(et51x, false);
+	// (void)vreg_setup(et51x, false);
 exit:
 	return rc;
 }
