@@ -14,7 +14,7 @@ config MHI_BUS
 	  bus or shared memory.
 
 config MHI_BUS_MISC
-	bool "Support for miscellaneous MHI features"
+	tristate "Support for miscellaneous MHI features"
 	depends on MHI_BUS
 	help
 	  Miscellaneous features support for MHI Bus driver includes IPC logs,

@@ -7,6 +7,7 @@
 #ifndef _MHI_CORE_MISC_H_
 #define _MHI_CORE_MISC_H_
 
+#include <linux/kconfig.h>
 #include <linux/mhi_misc.h>
 #include <linux/msm_pcie.h>
 
@@ -244,7 +245,7 @@ struct tsync_node {
 			u64 local_time, u64 remote_time);
 };
 
-#ifdef CONFIG_MHI_BUS_MISC
+#if IS_ENABLED(CONFIG_MHI_BUS_MISC)
 void mhi_misc_init(void);
 void mhi_misc_exit(void);
 int mhi_misc_init_mmio(struct mhi_controller *mhi_cntrl);
@@ -306,7 +307,7 @@ static inline void mhi_misc_mission_mode(struct mhi_controller *mhi_cntrl)
 {
 }
 
-static inline void mhi_special_dbs_pending(struct mhi_controller *mhi_cntrl)
+static inline void mhi_misc_dbs_pending(struct mhi_controller *mhi_cntrl)
 {
 }
 
